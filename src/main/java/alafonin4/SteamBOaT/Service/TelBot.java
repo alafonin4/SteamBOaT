@@ -10,10 +10,13 @@ import org.antlr.v4.runtime.misc.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
+import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -43,6 +46,15 @@ public class TelBot extends TelegramLongPollingBot {
         this.currentOrder = new HashMap<>();
         this.isName = new HashMap<>();
         this.isDigit = new HashMap<>();
+        List<BotCommand> listOfCommands = new ArrayList<>();
+        listOfCommands.add(new BotCommand("/start", "Перезагрузка бота"));
+        listOfCommands.add(new BotCommand("/add_funds", "Пополнение баланса"));
+        listOfCommands.add(new BotCommand("/history", "История пополнений"));
+        try {
+            this.execute(new SetMyCommands(listOfCommands, new BotCommandScopeDefault(), null));
+        } catch (TelegramApiException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     @Override
@@ -54,22 +66,23 @@ public class TelBot extends TelegramLongPollingBot {
             switch (messageText) {
                 case "/start":
                     registerUser(update.getMessage());
-                    sendMessage(chatId, "Welcome to the bot! Use /top_up to add funds or /rep_history to view your orders.");
+                    sendMessage(chatId, "Добро пожаловать! Используйте команду /addFunds для пополнения баланса " +
+                            "или команду /history для просмотра истории ваших пополнений.");
                     break;
-                case "/top_up":
+                case "/add_funds":
                     updateBalance(chatId);
                     break;
-                case "/rep_history":
+                case "/history":
                     sendOrderInfo(chatId, 0); // Display the first order
                     break;
                 default:
-                    if (isName.get(chatId) && !isDigit.get(chatId)) {
+                    if (isName.get(chatId) && !isDigit.get(chatId) && !messageText.startsWith("/")) {
                         currentOrder.get(chatId).setSteamId(messageText);
                         isName.put(chatId, false);
                         isDigit.put(chatId, true);
                         ConfirmationsSteamId(chatId);
                         break;
-                    } else if (!isName.get(chatId) && isDigit.get(chatId)) {
+                    } else if (!isName.get(chatId) && isDigit.get(chatId) && !messageText.startsWith("/")) {
                         NumberFormat formatter = new DecimalFormat();
                         Number number;
                         double result;
@@ -96,7 +109,8 @@ public class TelBot extends TelegramLongPollingBot {
                         ConfirmationsAmountOfReplenishment(chatId);
                         break;
                     }
-                    sendMessage(chatId, "Sorry, command was not recognized");
+                    sendMessage(chatId, "Извините, команда не распознана.");
+                    break;
             }
         } else if (update.hasCallbackQuery()) {
             String callbackData = update.getCallbackQuery().getData();
@@ -302,7 +316,7 @@ public class TelBot extends TelegramLongPollingBot {
                     saveInDataBase(chatId);
                     break;
                 default:
-                    sendMessage(chatId, "Sorry, command was not recognized");
+                    sendMessage(chatId, "Извините, команда не распознана.");
             }
         }
     }
