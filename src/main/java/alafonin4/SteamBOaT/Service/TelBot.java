@@ -66,7 +66,7 @@ public class TelBot extends TelegramLongPollingBot {
             switch (messageText) {
                 case "/start":
                     registerUser(update.getMessage());
-                    sendMessage(chatId, "Добро пожаловать! Используйте команду /addFunds для пополнения баланса " +
+                    sendMessage(chatId, "Добро пожаловать! Используйте команду /add_funds для пополнения баланса " +
                             "или команду /history для просмотра истории ваших пополнений.");
                     break;
                 case "/add_funds":
@@ -83,6 +83,7 @@ public class TelBot extends TelegramLongPollingBot {
                         ConfirmationsSteamId(chatId);
                         break;
                     } else if (!isName.get(chatId) && isDigit.get(chatId) && !messageText.startsWith("/")) {
+
                         NumberFormat formatter = new DecimalFormat();
                         Number number;
                         double result;
@@ -90,7 +91,8 @@ public class TelBot extends TelegramLongPollingBot {
                             number = formatter.parse(messageText);
                             result = number.doubleValue();
                         } catch (ParseException e) {
-                            throw new RuntimeException(e);
+                            sendMessage(chatId, "Вы ввели не число.");
+                            break;
                         }
 
                         double c = result;
@@ -120,12 +122,15 @@ public class TelBot extends TelegramLongPollingBot {
             switch (callbackData) {
                 case "Previous Page":
                     int prevOrderIndex = currentInds.get(chatId) - 3;
+
                     EditMessageText messageText = new EditMessageText();
                     Pair<String, Integer> p = getThreeOrders(chatId, prevOrderIndex);
+
                     messageText.setChatId(String.valueOf(chatId));
                     messageText.setText(p.a);
                     messageText.setReplyMarkup(SetKeyboardForHistory(currentInds.get(chatId), p.b));
                     messageText.setMessageId((int) messageId);
+
                     try {
                         execute(messageText);
                     } catch (TelegramApiException e) {
@@ -134,8 +139,10 @@ public class TelBot extends TelegramLongPollingBot {
                     break;
                 case "Next Page":
                     int nextOrderIndex = currentInds.get(chatId) + 3;
+
                     EditMessageText messText = new EditMessageText();
                     Pair<String, Integer> pair = getThreeOrders(chatId, nextOrderIndex);
+
                     messText.setChatId(String.valueOf(chatId));
                     messText.setText(pair.a);
                     messText.setReplyMarkup(SetKeyboardForHistory(currentInds.get(chatId), pair.b));
