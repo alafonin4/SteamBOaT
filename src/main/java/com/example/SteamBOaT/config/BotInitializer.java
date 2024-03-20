@@ -1,6 +1,6 @@
-package com.example.SteamBOaT.config;
+package alafonin4.SteamBOaT.config;
 
-import com.example.SteamBOaT.Service.TelBot;
+import alafonin4.SteamBOaT.Service.TelBot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
@@ -21,7 +21,8 @@ public class BotInitializer {
             telegramBotsApi.registerBot(bot);
         }
         catch (TelegramApiException e) {
-            System.out.println(e.getMessage());
+            System.out.println("Error registering Telegram bot: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
