@@ -21,10 +21,14 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class TelBot extends TelegramLongPollingBot {
@@ -77,6 +81,15 @@ public class TelBot extends TelegramLongPollingBot {
                     break;
                 default:
                     if (isName.get(chatId) && !isDigit.get(chatId) && !messageText.startsWith("/")) {
+                        Pattern pattern = Pattern.compile("^[A-Za-z0-9_]{3,32}$");
+                        Matcher matcher = pattern.matcher(messageText);
+                        Boolean isMatch = matcher.find();
+                        if (!isMatch) {
+                            sendMessage(chatId, "Вы ввели не корректный логин Steam.\n" +
+                                    "Он должен состоять из английских букв, цифр или знака подчеркивания" +
+                                    " и быть длиной от 3 до 32 символов.");
+                            break;
+                        }
                         currentOrder.get(chatId).setSteamId(messageText);
                         isName.put(chatId, false);
                         isDigit.put(chatId, true);
@@ -84,13 +97,11 @@ public class TelBot extends TelegramLongPollingBot {
                         break;
                     } else if (!isName.get(chatId) && isDigit.get(chatId) && !messageText.startsWith("/")) {
 
-                        NumberFormat formatter = new DecimalFormat();
-                        Number number;
+                        String input = messageText.replace(",", ".");
                         double result;
                         try {
-                            number = formatter.parse(messageText);
-                            result = number.doubleValue();
-                        } catch (ParseException e) {
+                            result = Double.parseDouble(input);
+                        } catch (Exception e) {
                             sendMessage(chatId, "Вы ввели не число.");
                             break;
                         }
@@ -103,8 +114,14 @@ public class TelBot extends TelegramLongPollingBot {
                             sendMessage(chatId, "Минимальная сумма зачисления 100 рублей");
                             break;
                         }
-                        currentOrder.get(chatId).setSum(c);
-                        currentOrder.get(chatId).setSumWithCommission(c * 1.05);
+                        BigDecimal r = new BigDecimal(c);
+                        r = r.setScale(2, RoundingMode.DOWN);
+                        System.out.println(Double.parseDouble(String.valueOf(r)));
+                        currentOrder.get(chatId).setSum(Double.parseDouble(String.valueOf(r)));
+
+                        BigDecimal re = new BigDecimal(c * 1.05);
+                        re = re.setScale(2, RoundingMode.DOWN);
+                        currentOrder.get(chatId).setSumWithCommission(Double.parseDouble(String.valueOf(re)));
                         isName.put(chatId, false);
                         isDigit.put(chatId, false);
 
@@ -156,11 +173,13 @@ public class TelBot extends TelegramLongPollingBot {
                 case "Yes":
                     EditMessageText yesText = new EditMessageText();
                     yesText.setChatId(String.valueOf(chatId));
+                    BigDecimal r = new BigDecimal(currentOrder.get(chatId).getSum());
+                    r = r.setScale(2, RoundingMode.DOWN);
                     String str = "Подтвердите оплату:\n" +
                             "Информация по оплате\n\nПополнение STEAM \n\n" +
                             " Логин: " + currentOrder.get(chatId).getSteamId() + "\n" +
                             " Сумма оплаты: " + currentOrder.get(chatId).getSumWithCommission() + "\n" +
-                            " Сумма пополнения: " + currentOrder.get(chatId).getSum();
+                            " Сумма пополнения: " + Double.parseDouble(String.valueOf(r));
                     yesText.setText(str);
                     yesText.setMessageId((int) messageId);
 
